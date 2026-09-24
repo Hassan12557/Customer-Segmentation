@@ -40,7 +40,9 @@
 import React, { useState } from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
+import HowItWorks from './components/HowItWorks';
 import PredictionDashboard from './components/PredictionDashboard';
+import Footer from './components/Footer';
 
 export default function App() {
   const [authModalState, setAuthModalState] = useState({
@@ -48,12 +50,10 @@ export default function App() {
     mode: 'login',
   });
 
-  // Open Modal Handler
   const handleOpenAuth = (mode = 'login') => {
     setAuthModalState({ isOpen: true, mode });
   };
 
-  // Smooth Scroll Handler
   const scrollToSection = (id) => {
     const element = document.getElementById(id);
     if (element) {
@@ -62,26 +62,20 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased">
-      {/* Navigation Header */}
-      <Navbar
-        onOpenAuth={handleOpenAuth}
-        scrollToSection={scrollToSection}
-      />
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
+      <Navbar onOpenAuth={handleOpenAuth} scrollToSection={scrollToSection} />
 
-      {/* Main Page Content */}
-      <main>
-        <Hero
-          onOpenAuth={handleOpenAuth}
-          scrollToSection={scrollToSection}
-        />
-
+      <main className="grow">
+        <Hero onOpenAuth={handleOpenAuth} scrollToSection={scrollToSection} />
+        <HowItWorks />
         <div id="prediction-dashboard">
           <PredictionDashboard />
         </div>
       </main>
 
-      {/* Auth Modal overlay */}
+      <Footer scrollToSection={scrollToSection} />
+
+      {/* Auth Modal */}
       {authModalState.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative border border-slate-100">
