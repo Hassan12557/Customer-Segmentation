@@ -1,7 +1,6 @@
-// src/components/Navbar.jsx
 import React, { useState } from 'react';
 
-export default function Navbar({ onOpenAuth, scrollToSection }) {
+export default function Navbar({ onOpenAuth, scrollToSection, onOpenAboutMe }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -22,14 +21,14 @@ export default function Navbar({ onOpenAuth, scrollToSection }) {
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center gap-8">
           <button
-            onClick={() => scrollToSection('about-us')}
-            className="text-slate-600 hover:text-blue-600 font-medium transition-colors"
+            onClick={onOpenAboutMe}
+            className="text-sm font-semibold text-slate-600 hover:text-blue-600 transition cursor-pointer"
           >
-            About Us
+            About Me
           </button>
           <button
             onClick={() => scrollToSection('how-it-works')}
-            className="text-slate-600 hover:text-blue-600 font-medium transition-colors"
+            className="text-slate-600 hover:text-blue-600 font-medium transition-colors cursor-pointer"
           >
             How it Works
           </button>
@@ -39,13 +38,13 @@ export default function Navbar({ onOpenAuth, scrollToSection }) {
         <div className="hidden md:flex items-center gap-4">
           <button
             onClick={() => onOpenAuth('login')}
-            className="text-slate-700 hover:text-blue-600 font-medium px-4 py-2 transition-colors"
+            className="text-slate-700 hover:text-blue-600 font-medium px-4 py-2 transition-colors cursor-pointer"
           >
             Log In
           </button>
           <button
             onClick={() => onOpenAuth('signup')}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-xl shadow-lg shadow-blue-600/25 transition-all hover:scale-[1.02]"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-xl shadow-lg shadow-blue-600/25 transition-all hover:scale-[1.02] cursor-pointer"
           >
             Sign Up
           </button>
@@ -54,7 +53,7 @@ export default function Navbar({ onOpenAuth, scrollToSection }) {
         {/* Mobile Hamburger Menu Toggle */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 text-slate-600 hover:text-slate-900"
+          className="md:hidden p-2 text-slate-600 hover:text-slate-900 cursor-pointer"
           aria-label="Toggle Menu"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -71,27 +70,27 @@ export default function Navbar({ onOpenAuth, scrollToSection }) {
       {mobileMenuOpen && (
         <div className="md:hidden bg-white border-b border-slate-100 px-4 pt-2 pb-6 space-y-3">
           <button
-            onClick={() => { scrollToSection('about-us'); setMobileMenuOpen(false); }}
-            className="block w-full text-left px-3 py-2 text-slate-600 font-medium"
+            onClick={() => { onOpenAboutMe(); setMobileMenuOpen(false); }}
+            className="block w-full text-left px-3 py-2 text-slate-600 font-medium cursor-pointer"
           >
-            About Us
+            About Me
           </button>
           <button
             onClick={() => { scrollToSection('how-it-works'); setMobileMenuOpen(false); }}
-            className="block w-full text-left px-3 py-2 text-slate-600 font-medium"
+            className="block w-full text-left px-3 py-2 text-slate-600 font-medium cursor-pointer"
           >
             How it Works
           </button>
           <div className="pt-2 flex flex-col gap-2">
             <button
               onClick={() => { onOpenAuth('login'); setMobileMenuOpen(false); }}
-              className="w-full text-center py-2 text-slate-700 font-medium border border-slate-200 rounded-xl"
+              className="w-full text-center py-2 text-slate-700 font-medium border border-slate-200 rounded-xl cursor-pointer"
             >
               Log In
             </button>
             <button
               onClick={() => { onOpenAuth('signup'); setMobileMenuOpen(false); }}
-              className="w-full text-center py-2.5 bg-blue-600 text-white font-semibold rounded-xl shadow-md"
+              className="w-full text-center py-2.5 bg-blue-600 text-white font-semibold rounded-xl shadow-md cursor-pointer"
             >
               Sign Up
             </button>
