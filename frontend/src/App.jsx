@@ -42,9 +42,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
-      <Navbar 
-        onOpenAuth={handleOpenAuth} 
-        scrollToSection={scrollToSection} 
+      <Navbar
+        onOpenAuth={handleOpenAuth}
+        scrollToSection={scrollToSection}
         onOpenAboutMe={handleNavigateAboutMe}
       />
 
@@ -60,9 +60,9 @@ export default function App() {
         )}
       </main>
 
-      <Footer 
-        scrollToSection={scrollToSection} 
-        onOpenAboutMe={handleNavigateAboutMe} 
+      <Footer
+        scrollToSection={scrollToSection}
+        onOpenAboutMe={handleNavigateAboutMe}
         onOpenAuth={handleOpenAuth}
       />
 
