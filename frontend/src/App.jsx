@@ -1,20 +1,51 @@
 import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import HowItWorks from './components/HowItWorks';
 import PredictionDashboard from './components/PredictionDashboard';
 import AboutMe from './components/AboutMe';
 import Footer from './components/Footer';
+import AuthModal from './components/AuthModal';
+import { loginUser, signupUser, verifyOtp } from './services/api';
 
-export default function App() {
-  const [activeView, setActiveView] = useState('home'); // 'home' | 'about'
-  const [authModalState, setAuthModalState] = useState({
-    isOpen: false,
-    mode: 'login',
-  });
+function MainLayout() {
+  // Navigation views: 'home' | 'dashboard' | 'about'
+  // Always defaults to 'home' so users land on the Hero page first
+  const [activeView, setActiveView] = useState('home'); 
+  const [authModal, setAuthModal] = useState({ isOpen: false, mode: 'login' });
+
+  const { user, loginSession, logoutSession } = useAuth();
 
   const handleOpenAuth = (mode = 'login') => {
-    setAuthModalState({ isOpen: true, mode });
+    setAuthModal({ isOpen: true, mode });
+  };
+
+  const handleCloseAuth = () => {
+    setAuthModal({ isOpen: false, mode: 'login' });
+  };
+
+  const handleLoginRequest = async (credentials) => {
+    const res = await loginUser(credentials);
+    loginSession(res.data.access_token, res.data.user);
+    handleCloseAuth();
+    setActiveView('dashboard'); // Redirect to Dashboard after login
+  };
+
+  const handleSignupRequest = async (data) => {
+    await signupUser(data);
+  };
+
+  const handleVerifyOtp = async (otpData) => {
+    const res = await verifyOtp(otpData);
+    loginSession(res.data.access_token, res.data.user);
+    handleCloseAuth();
+    setActiveView('dashboard'); // Redirect to Dashboard after OTP verification
+  };
+
+  const handleLogout = () => {
+    logoutSession();
+    setActiveView('home'); // Reset to Home page on logout
   };
 
   const scrollToSection = (id) => {
@@ -30,87 +61,55 @@ export default function App() {
     }
   };
 
-  const handleNavigateAboutMe = () => {
-    setActiveView('about');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const handleNavigateHome = () => {
-    setActiveView('home');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
       <Navbar
+        user={user}
+        activeView={activeView}
+        setActiveView={setActiveView}
         onOpenAuth={handleOpenAuth}
+        onLogout={handleLogout}
         scrollToSection={scrollToSection}
-        onOpenAboutMe={handleNavigateAboutMe}
       />
 
       <main className="grow">
-        {activeView === 'home' ? (
+        {activeView === 'dashboard' && user ? (
+          /* Render Dashboard ONLY when activeView is 'dashboard' AND user is logged in */
+          <PredictionDashboard user={user} />
+        ) : activeView === 'about' ? (
+          /* Render About Me Page */
+          <AboutMe onNavigateHome={() => setActiveView('home')} />
+        ) : (
+          /* Default Landing Page View */
           <>
             <Hero onOpenAuth={handleOpenAuth} scrollToSection={scrollToSection} />
             <HowItWorks />
-            <PredictionDashboard onOpenAuth={handleOpenAuth} />
           </>
-        ) : (
-          <AboutMe onNavigateHome={handleNavigateHome} />
         )}
       </main>
 
       <Footer
         scrollToSection={scrollToSection}
-        onOpenAboutMe={handleNavigateAboutMe}
+        onOpenAboutMe={() => { setActiveView('about'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
         onOpenAuth={handleOpenAuth}
       />
 
-      {/* Auth Modal */}
-      {authModalState.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative border border-slate-100">
-            <button
-              onClick={() => setAuthModalState({ ...authModalState, isOpen: false })}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 font-bold p-1 rounded-full hover:bg-slate-100 transition cursor-pointer"
-            >
-              ✕
-            </button>
-            <h2 className="text-2xl font-black text-slate-900 mb-1">
-              {authModalState.mode === 'login' ? 'Welcome Back' : 'Get Started Free'}
-            </h2>
-            <p className="text-sm text-slate-500 mb-6">
-              {authModalState.mode === 'login'
-                ? 'Sign in to access your customer segmentation dashboard.'
-                : 'Start predicting customer behavior with AI in seconds.'}
-            </p>
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Email</label>
-                <input
-                  type="email"
-                  placeholder="name@company.com"
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-all shadow-md shadow-blue-600/20 cursor-pointer"
-              >
-                {authModalState.mode === 'login' ? 'Sign In' : 'Create Account'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      <AuthModal
+        isOpen={authModal.isOpen}
+        initialMode={authModal.mode}
+        onClose={handleCloseAuth}
+        onLoginRequest={handleLoginRequest}
+        onSignupRequest={handleSignupRequest}
+        onVerifyOtp={handleVerifyOtp}
+      />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainLayout />
+    </AuthProvider>
   );
 }
