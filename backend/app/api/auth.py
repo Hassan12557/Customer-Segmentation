@@ -1,38 +1,46 @@
-from fastapi import APIRouter, HTTPException, status
-from app.schemas.schemas import SignUpRequest, SignUpResponse, OTPVerifyRequest, TokenResponse, LoginRequest
-from app.services.email_service import generate_otp, verify_otp_code, send_otp_email
+from fastapi import APIRouter, HTTPException, status, Depends
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 import uuid
 
+from app.db.database import get_db
+from app.db.models import User
+from app.schemas.schemas import SignUpRequest, SignUpResponse, OTPVerifyRequest, TokenResponse, LoginRequest
+from app.services.email_service import generate_otp, verify_otp_code, send_otp_email
+
 router = APIRouter()
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Registered users database: { "email": { "name": ..., "email": ..., "password": ... } }
-users_db = {}
-
-# Pending registrations waiting for OTP verification
+# Temporary cache for unverified signups prior to OTP verification
 pending_users = {}
 
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
 @router.post("/signup", response_model=SignUpResponse)
-def signup(req: SignUpRequest):
+def signup(req: SignUpRequest, db: Session = Depends(get_db)):
     email = req.email.strip().lower()
 
-    # 1. Check if an account is already fully registered
-    if email in users_db:
+    # Check database for existing registered user
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="An account with this email already exists. Please log in instead."
         )
 
-    # 2. Extract name
     name = getattr(req, "name", None) or getattr(req, "full_name", None) or email.split("@")[0]
 
-    # 3. Store in pending users until OTP is verified
+    # Cache user details until OTP verification completes
     pending_users[email] = {
-        "name": name,
+        "full_name": name,
         "email": email,
         "password": req.password
     }
 
-    # 4. Generate & send OTP
     otp_code = generate_otp(email)
     send_otp_email(email, otp_code)
 
@@ -43,7 +51,7 @@ def signup(req: SignUpRequest):
     )
 
 @router.post("/verify-otp", response_model=TokenResponse)
-def verify_otp(req: OTPVerifyRequest):
+def verify_otp(req: OTPVerifyRequest, db: Session = Depends(get_db)):
     email = req.email.strip().lower()
 
     if not verify_otp_code(email, req.otp_code):
@@ -52,34 +60,42 @@ def verify_otp(req: OTPVerifyRequest):
             detail="Invalid or expired OTP code"
         )
 
-    # Move user from pending to active registered users
-    user_data = pending_users.pop(email, {
-        "name": email.split("@")[0],
-        "email": email,
-        "password": ""
-    })
-    
-    users_db[email] = user_data
+    user_data = pending_users.pop(email, None)
+    if not user_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Signup session expired or not found. Please sign up again."
+        )
+
+    # Persist verified user into SQLite database
+    new_user = User(
+        full_name=user_data["full_name"],
+        email=email,
+        hashed_password=hash_password(user_data["password"]),
+        is_verified=True
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
 
     return TokenResponse(
         access_token=str(uuid.uuid4()),
         token_type="bearer",
-        user={"name": user_data["name"], "email": email}
+        user={"name": new_user.full_name, "email": new_user.email}
     )
 
 @router.post("/login", response_model=TokenResponse)
-def login(req: LoginRequest):
+def login(req: LoginRequest, db: Session = Depends(get_db)):
     email = req.email.strip().lower()
-    user = users_db.get(email)
+    user = db.query(User).filter(User.email == email).first()
 
-    # Validate existing account & credentials
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No account found with this email. Please sign up first."
         )
 
-    if user.get("password") != req.password:
+    if not verify_password(req.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect password. Please try again."
@@ -88,5 +104,5 @@ def login(req: LoginRequest):
     return TokenResponse(
         access_token=str(uuid.uuid4()),
         token_type="bearer",
-        user={"name": user["name"], "email": email}
+        user={"name": user.full_name, "email": user.email}
     )
