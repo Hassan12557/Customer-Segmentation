@@ -1,0 +1,23 @@
+cat << 'EOF' > docker-compose.yml
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - SENDER_EMAIL=muhammadhassanrazabscs@gmail.com
+      - SENDER_PASSWORD=your_16_digit_app_password
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
+EOF
