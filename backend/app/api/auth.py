@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 import uuid
@@ -21,7 +21,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 @router.post("/signup", response_model=SignUpResponse)
-def signup(req: SignUpRequest, db: Session = Depends(get_db)):
+def signup(req: SignUpRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     email = req.email.strip().lower()
 
     # Check database for existing registered user
@@ -42,7 +42,9 @@ def signup(req: SignUpRequest, db: Session = Depends(get_db)):
     }
 
     otp_code = generate_otp(email)
-    send_otp_email(email, otp_code)
+    
+    # Offload email sending to a background task so the API responds instantly
+    background_tasks.add_task(send_otp_email, email, otp_code)
 
     return SignUpResponse(
         status="success",
